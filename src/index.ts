@@ -1,5 +1,5 @@
 'use strict';
-
+import './temp';
 const isBrowser = new Function('try {return this===window;}catch(e){return false;}');
 
 let useES6 = false;

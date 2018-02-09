@@ -106,6 +106,7 @@ export function Provides(target: Function) {
 }
 
 /**
+ * 修改构造函数,使得该类的实例总是由容器创建
  * A decorator to tell the container that this class should its instantiation always handled by the Container.
  *
  * An AutoWired class will have its constructor overriden to always delegate its instantiation to the IoC Container.
@@ -167,6 +168,7 @@ export function AutoWired(target: Function) { // <T extends {new(...args:any[]):
  * ```
  */
 export function Inject(...args: any[]) {
+    // 返回null 属性描述符为空
     if (args.length < 3 || typeof args[2] === 'undefined') {
         return InjectPropertyDecorator.apply(this, args);
     } else if (args.length === 3 && typeof args[2] === 'number') {
@@ -178,13 +180,16 @@ export function Inject(...args: any[]) {
 
 /**
  * Decorator processor for [[Inject]] decorator on properties
+ * @param target 原型对象
  */
 function InjectPropertyDecorator(target: Function, key: string) {
+    // 处理属性和方法参数的装饰
     let t = Reflect.getMetadata('design:type', target, key);
     if (!t) {
         // Needed to support react native inheritance
         t = Reflect.getMetadata('design:type', target.constructor, key);
     }
+    // 修改原型中的属性
     IoCContainer.injectProperty(target.constructor, key, t);
 }
 
@@ -192,7 +197,7 @@ function InjectPropertyDecorator(target: Function, key: string) {
  * Decorator processor for [[Inject]] decorator on constructor parameters
  */
 function InjectParamDecorator(target: Function, propertyKey: string | symbol, parameterIndex: number) {
-    if (!propertyKey) { // only intercept constructor parameters
+    if (!propertyKey) { // 只修改构造函数参数
         const config: ConfigImpl = <ConfigImpl>IoCContainer.bind(target);
         config.paramTypes = config.paramTypes || [];
         const paramTypes: Array<any> = Reflect.getMetadata('design:paramtypes', target);
@@ -280,6 +285,9 @@ export class Container {
  * Internal implementation of IoC Container.
  */
 class IoCContainer {
+    /**
+     * 构造函数与配置对象
+     */
     private static bindings: Map<FunctionConstructor, ConfigImpl> = new Map<FunctionConstructor, ConfigImpl>();
 
     static isBound(source: Function): boolean {
@@ -289,6 +297,10 @@ class IoCContainer {
         return (!!config);
     }
 
+    /**
+     * 获取类型描述符,如果不存在就添加类到Ioc容器中,并返回类型描述符
+     * @param source
+     */
     static bind(source: Function): Config {
         checkType(source);
         const baseSource = InjectorHanlder.getConstructorFromType(source);
@@ -310,10 +322,17 @@ class IoCContainer {
 
     static injectProperty(target: Function, key: string, propertyType: Function) {
         const propKey = `__${key}`;
+        console.log('injectProperty called');
         Object.defineProperty(target.prototype, key, {
             enumerable: true,
             get: function() {
-                return this[propKey] ? this[propKey] : this[propKey] = IoCContainer.get(propertyType);
+                console.log(target);
+                if(this[propKey]) {
+                    return this[propKey];
+                } else {
+                    this[propKey] = IoCContainer.get(propertyType);
+                    return this[propKey];
+                }
             },
             set: function(newValue) {
                 this[propKey] = newValue;
@@ -367,9 +386,18 @@ export interface Config {
 }
 
 class ConfigImpl implements Config {
+    /**
+     * 类(实际上是构造函数)
+     */
     source: Function;
+    /**
+     * 实例创建工厂
+     */
     iocprovider: Provider;
     iocscope: Scope;
+    /**
+     * 被装饰的构造函数(AutoWried)
+     */
     decoratedConstructor: FunctionConstructor;
     paramTypes: Array<any>;
 
@@ -377,6 +405,10 @@ class ConfigImpl implements Config {
         this.source = source;
     }
 
+    /**
+     * 设置实例创建工厂(iocprovider)
+     * @param target
+     */
     to(target: FunctionConstructor) {
         checkType(target);
         const targetSource = InjectorHanlder.getConstructorFromType(target);
@@ -384,7 +416,7 @@ class ConfigImpl implements Config {
             const configImpl = this;
             this.iocprovider = {
                 get: () => {
-                    const params = configImpl.getParameters();
+                    const params = configImpl.getParameters();// 如果有参数则带上参数构造
                     if (configImpl.decoratedConstructor) {
                         return (params ? new configImpl.decoratedConstructor(...params) : new configImpl.decoratedConstructor());
                     }
@@ -428,6 +460,10 @@ class ConfigImpl implements Config {
         return this;
     }
 
+    /**
+     * 修改构造函数
+     * @param newConstructor
+     */
     toConstructor(newConstructor: FunctionConstructor) {
         this.decoratedConstructor = newConstructor;
         return this;

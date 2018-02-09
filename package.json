@@ -5,7 +5,7 @@
   "author": "Thiago da Rosa de Bustamante <trbustamante@gmail.com>",
   "scripts": {
     "start": "tsc -w",
-    "build": "npm run clean && npm run tsc",
+    "build": "npm-run-all clean tsc",
     "clean": "rimraf *.js *.d.ts *.js.map",
     "lint": "tslint ./src/**/*.ts ./test/**/*.ts",
     "format": "tsfmt -r",
@@ -14,7 +14,8 @@
     "test:es5": "cross-env NODE_ENV=test mocha",
     "test:es6": "cross-env NODE_ENV=test mocha --opts ./test/mocha-es6.opts",
     "test:coverage": "nyc npm run test:es6",
-    "tsc": "npm run tsc:es6 && npm run tsc:es5 && npm run tsc:index",
+    "tsc": "npm-run-all tsc:es6  tsc:es5  tsc:index",
+    "tsc:debug":"tsc --target ES6 --outDir .",
     "tsc:es5": "tsc --outDir . && renamer --find typescript-ioc --replace es5 'typescript-ioc*.js*' && replace 'typescript-ioc.js' 'es5.js' ./es5.js",
     "tsc:es6": "tsc --target ES6 --outDir . && renamer --find typescript-ioc --replace es6 'typescript-ioc*.js*'  && replace 'typescript-ioc.js' 'es6.js' ./es6.js",
     "tsc:index": "tsc --outDir . src/index.ts"
@@ -49,6 +50,7 @@
     "cross-env": "^4.0.0",
     "istanbul": "^0.4.5",
     "mocha": "^3.3.0",
+    "npm-run-all": "^4.1.2",
     "nyc": "^10.2.0",
     "renamer": "^0.6.1",
     "replace": "^0.3.0",

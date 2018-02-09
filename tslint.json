@@ -32,7 +32,7 @@
     "no-conditional-assignment": false,
     "no-consecutive-blank-lines": true,
     "no-console": [
-      true,
+      false,
       "log",
       "debug",
       "info",
